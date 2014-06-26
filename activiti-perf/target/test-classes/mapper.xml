@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="RuJob">
+	<update id="updateJob" parameterType="map">
+		UPDATE act_ru_job SET
+		DUEDATE_ = '#{duedate}' WHERE ID_ IN (SELECT ID_ FROM (SELECT ID_ FROM
+		act_ru_job WHERE PROCESS_INSTANCE_ID_ IN (SELECT ID_ FROM
+		act_hi_procinst WHERE CONVERT(BUSINESS_KEY_,UNSIGNED INTEGER) <= #{maxId})) AS X)
+	</update>
+	<update id="updateVar" parameterType="map">
+		UPDATE act_ru_variable set
+		TEXT_ = '#{duedate}' WHERE NAME_ = 'renewalDate' AND proc_inst_id_ IN
+		(SELECT ID_ FROM act_hi_procinst WHERE CONVERT(BUSINESS_KEY_,UNSIGNED INTEGER) <= #{maxId})
+	</update>
+</mapper>

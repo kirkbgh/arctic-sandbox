@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/context
+           				http://www.springframework.org/schema/context/spring-context-3.0.xsd
+           				http://camel.apache.org/schema/spring
+           				http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<context:component-scan base-package="com.scratch" />
+
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" >
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE"/>
+        <property name="location">
+            <value>test.properties</value>
+        </property>
+    </bean>
+	
+	<bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+		<property name="processEngineConfiguration" ref="processEngineConfiguration" />
+	</bean>
+
+	<bean id="repositoryService" factory-bean="processEngine"
+		factory-method="getRepositoryService" />
+	<bean id="runtimeService" factory-bean="processEngine"
+		factory-method="getRuntimeService" />
+	<bean id="taskService" factory-bean="processEngine"
+		factory-method="getTaskService" />
+	<bean id="historyService" factory-bean="processEngine"
+		factory-method="getHistoryService" />
+	<bean id="managementService" factory-bean="processEngine"
+		factory-method="getManagementService" />
+	<bean id="activitiRule" class="org.activiti.engine.test.ActivitiRule">
+		<property name="processEngine" ref="processEngine" />
+	</bean>
+
+	<bean id="processEngineConfiguration" class="org.activiti.spring.SpringProcessEngineConfiguration">
+		<!--  <property name="databaseType" value="h2" />  -->
+		<property name="databaseType" value="mysql" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="databaseSchemaUpdate" value="true" />
+		
+		<property name="jobExecutorActivate" value="false"/>
+		<property name="jobExecutor" ref="jobExecutor"/>
+
+		<!-- JPA
+		<property name="jpaEntityManagerFactory" ref="entityManagerFactory" />
+		<property name="jpaHandleTransaction" value="true" />
+		<property name="jpaCloseEntityManager" value="true" />
+		<property name="deploymentResources"
+			value="classpath*:chapter6/jpa/processWithJPA.bpmn20.xml" />
+			 -->
+	</bean>
+
+	<bean id="jobExecutor" class="com.scratch.activiti.test.TestJobExecutor">
+		<property name="taskExecutor" ref="taskExecutor" />
+		<!-- Set the period for the job executor to run  -->
+		<property name="waitTimeInMillis" value="300000"/>
+		<property name="lockTimeInMillis" value="300000"/>
+		<!-- <property name="maxJobsPerAcquisition" value="100"/> -->
+	</bean>
+	
+<!-- 	<bean id="jobExecutor" class="org.activiti.spring.SpringJobExecutor">
+		<property name="taskExecutor" ref="taskExecutor" />
+		Set the period for the job executor to run 
+		<property name="waitTimeInMillis" value="60000"/>
+		<property name="lockTimeInMillis" value="30000"/>
+	</bean>
+ -->	
+	<bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+	<!-- Copied the values from the DefaultJobExecutor -->
+		<property name="corePoolSize" value="3" />
+		<property name="maxPoolSize" value="10" />
+		<property name="queueCapacity" value="3" />
+	</bean>
+
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+		<property name="targetDataSource">
+			<bean class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+				<property name="driverClass" value="com.mysql.jdbc.Driver" />
+				<property name="url" value="jdbc:mysql://localhost/${databaseName}" />
+				<property name="username" value="activitiUser" />
+				<property name="password" value="password" />
+			</bean>
+		</property>
+<!-- 		<property name="targetDataSource">
+			<bean class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+				<property name="driverClass" value="org.h2.Driver" />
+				<property name="url" value="jdbc:h2:mem:activiti;DB_CLOSE_DELAY=1000" />
+				<property name="username" value="sa" />
+				<property name="password" value="" />
+			</bean>
+		</property> -->
+	</bean>
+
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+<!-- 	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations" value="classpath*:mapper.xml" />
+	</bean>
+ -->
+<!-- JPA Examples 
+	<bean id="persistenceUnitManager"
+		class="org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager">
+		<property name="persistenceXmlLocation">
+			<value>
+				classpath:chapter6/jpa/jpa-persistence.xml
+			</value>
+		</property>
+	</bean>
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="persistenceUnitManager" ref="persistenceUnitManager" />
+	</bean>
+	<bean id="bookService" class="org.bpmnwithactiviti.chapter6.jpa.BookService" />
+ -->
+ 
+	<camelContext id="camelProcess" xmlns="http://camel.apache.org/schema/spring">
+		<packageScan>
+			<package>com.scratch.activiti</package>
+		</packageScan>
+	</camelContext>
+	<bean id="camel" class="org.activiti.camel.CamelBehaviour">
+		<constructor-arg index="0">
+			<list>
+				<bean class="org.activiti.camel.SimpleContextProvider">
+					<constructor-arg index="0" value="helloCamelProcess" />
+					<constructor-arg index="1" ref="camelProcess" />
+				</bean>
+			</list>
+		</constructor-arg>
+	</bean>
+
+</beans>
